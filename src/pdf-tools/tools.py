@@ -46,7 +46,7 @@ except:
 import cairo
 from comun import (ALL_MIMETYPES_IMAGE, EXTENSIONS_FROM, MIMETYPES_IMAGE,
                    MIMETYPES_PDF, MIMETYPES_PNG, MMTOPIXEL, MMTOPNG, _)
-
+from PIL import Image
 
 
 mimetypes.init()
@@ -248,39 +248,11 @@ def convert_pdf_to_png(file_in):
 
 
 def create_from_images(file_out, images, width=1189, height=1682, margin=0):
-    temp_pdf = create_temp_file()
-    pdfsurface = cairo.PDFSurface(temp_pdf, width, height)
-    context = cairo.Context(pdfsurface)
-    for image in images:
-        if mimetypes.guess_type(image)[0] in MIMETYPES_PNG:
-            imagesurface = cairo.ImageSurface.create_from_png(image)
-        else:
-            imagesurface = create_image_surface_from_file(image)
-        imagesurface_width = imagesurface.get_width()
-        imagesurface_height = imagesurface.get_height()
-        scale_x = (imagesurface_width / MMTOPIXEL) / width
-        scale_y = (imagesurface_height / MMTOPIXEL) / height
-        if scale_x > scale_y:
-            scale = scale_x
-        else:
-            scale = scale_y
-        if margin == 1:
-            scale = scale * 1.05
-        elif margin == 2:
-            scale = scale * 1.15
-        x = (width - imagesurface_width / MMTOPIXEL / scale) / 2
-        y = (height - imagesurface_height / MMTOPIXEL / scale) / 2
-        context.save()
-        context.translate(x, y)
-        context.scale(1.0 / MMTOPIXEL / scale, 1.0 / MMTOPIXEL / scale)
-        context.set_source_surface(imagesurface)
-        context.paint()
-        context.restore()
-        context.show_page()
-    pdfsurface.flush()
-    pdfsurface.finish()
-    shutil.copy(temp_pdf, file_out)
-    os.remove(temp_pdf)
+    if not images:
+        return
+    first_img = Image.open(images[0])
+    first_img.save(file_out, format="PDF", save_all=True,
+                   append_images=[Image.open(images[i]) for i in range(1, len(images))])
 
 
 def reduce_pdf(file_in, dpi, append):
